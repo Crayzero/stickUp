@@ -1,6 +1,6 @@
 jQuery(
 function($) {
-	
+
 	$(document).ready(function(){
 		var contentButton = [];
 		var contentTop = [];
@@ -14,6 +14,9 @@ function($) {
 		var stickyMarginB = 0;
 		var currentMarginT = 0;
 		var topMargin = 0;
+
+		var cbs = $.Callbacks();
+
 		$(window).scroll(function(event){
    			var st = $(this).scrollTop();
    			if (st > lastScrollTop){
@@ -36,7 +39,7 @@ function($) {
 	        		}
 	        	}
 	  			if(objn == 0) {
-	  				console.log('error:needs arguments');
+	  				//console.log('error:needs arguments');
 	  			}
 
 	  			itemClass = options.itemClass;
@@ -52,71 +55,96 @@ function($) {
 	  					} else {
 	  						console.log("incorrect argument, ignored.");
 	  						topMargin = 0;
-	  					}	
+	  					}
 	  				}
 	  			} else {
 	  				topMargin = 0;
 	  			}
 	  			menuSize = $('.'+itemClass).size();
-  			}			
-			stickyHeight = parseInt($(this).height());
-			stickyMarginB = parseInt($(this).css('margin-bottom'));
-			currentMarginT = parseInt($(this).next().closest('div').css('margin-top'));
-			vartop = parseInt($(this).offset().top);
-			//$(this).find('*').removeClass(itemHover);
-		}
-		$(document).on('scroll', function() {
-			varscroll = parseInt($(document).scrollTop());
-			if(menuSize != null){
-				for(var i=0;i < menuSize;i++)
-				{
-					contentTop[i] = $('#'+content[i]+'').offset().top;
-					function bottomView(i) {
-						contentView = $('#'+content[i]+'').height()*.4;
-						testView = contentTop[i] - contentView;
-						//console.log(varscroll);
-						if(varscroll > testView){
-							$('.'+itemClass).removeClass(itemHover);
-							$('.'+itemClass+':eq('+i+')').addClass(itemHover);
-						} else if(varscroll < 50){
-							$('.'+itemClass).removeClass(itemHover);
-							$('.'+itemClass+':eq(0)').addClass(itemHover);
+  			}
+  			cbs.add(function (elem, menuSize) {
+				stickyHeight = parseInt(elem.height());
+				stickyMarginB = parseInt(elem.css('margin-bottom'));
+				currentMarginT = parseInt(elem.next().closest('div').css('margin-top'));
+				vartop = parseInt(elem.offset().top);
+
+  				return function () {
+					varscroll = parseInt($(document).scrollTop());
+					if(menuSize != null){
+						for(var i=0;i < menuSize;i++)
+						{
+							contentTop[i] = $('#'+content[i]+'').offset().top;
+							function bottomView(i) {
+								contentView = $('#'+content[i]+'').height()*.4;
+								testView = contentTop[i] - contentView;
+								//console.log(varscroll);
+								if(varscroll > testView){
+									$('.'+itemClass).removeClass(itemHover);
+									$('.'+itemClass+':eq('+i+')').addClass(itemHover);
+								} else if(varscroll < 50){
+									$('.'+itemClass).removeClass(itemHover);
+									$('.'+itemClass+':eq(0)').addClass(itemHover);
+								}
+							}
+							if(scrollDir == 'down' && varscroll > contentTop[i]-50 && varscroll < contentTop[i]+50) {
+								$('.'+itemClass).removeClass(itemHover);
+								$('.'+itemClass+':eq('+i+')').addClass(itemHover);
+							}
+							if(scrollDir == 'up') {
+								bottomView(i);
+							}
 						}
 					}
-					if(scrollDir == 'down' && varscroll > contentTop[i]-50 && varscroll < contentTop[i]+50) {
-						$('.'+itemClass).removeClass(itemHover);
-						$('.'+itemClass+':eq('+i+')').addClass(itemHover);
-					}
-					if(scrollDir == 'up') {
-						bottomView(i);
-					}
-				}
-			}
 
+					if(vartop < varscroll + topMargin){
+						if (options) {
+							if(options.class) {
+								elem.addClass(options.class);
+							}
+						}
+						elem.addClass('isStuck');
+						elem.next().closest('div').css({
+							'margin-top': stickyHeight + stickyMarginB + currentMarginT + 'px'
+						}, 10);
+						elem.css("position","fixed");
 
+						if (typeof options === "undefined") {
+							elem.css({
+								top: 0 + 'px',
+							}, 10, function(){
 
-			if(vartop < varscroll + topMargin){
-				$('.stuckMenu').addClass('isStuck');
-				$('.stuckMenu').next().closest('div').css({
-					'margin-top': stickyHeight + stickyMarginB + currentMarginT + 'px'
-				}, 10);
-				$('.stuckMenu').css("position","fixed");
-				$('.isStuck').css({
-					top: '0px'
-				}, 10, function(){
+							});
+						} else {
+							elem.css({
+								top: options.top || 0 + 'px',
+							}, 10, function(){
 
-				});
-			};
+							});
+						}
 
-			if(varscroll + topMargin < vartop){
-				$('.stuckMenu').removeClass('isStuck');
-				$('.stuckMenu').next().closest('div').css({
-					'margin-top': currentMarginT + 'px'
-				}, 10);
-				$('.stuckMenu').css("position","relative");
-			};
+					};
 
-		});
+					if(varscroll + topMargin < vartop){
+						if (options) {
+							elem.removeClass(options.class);
+						}
+						elem.removeClass('isStuck');
+						elem.next().closest('div').css({
+							'margin-top': currentMarginT + 'px'
+						}, 10);
+						elem.css("position","relative");
+					};
+  				}
+  			}($(this), menuSize));
+
+			//$(this).find('*').removeClass(itemHover);
+
+			$(document).unbind("scroll.stick");
+			$(document).bind('scroll.stick', function () {
+
+				cbs.fire();
+			});
+		}
 	});
 
 });
